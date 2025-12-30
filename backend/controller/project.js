@@ -65,6 +65,10 @@ export const createProjectWithUpload = async (req, res) => {
     // req.body may come from multipart/form-data
     const { title, client, summary, assignedReviewers, submittedBy, clientEmail } = req.body;
 
+    // Log helpful diagnostics for upload debugging
+    console.log('createProjectWithUpload: content-type =', req.headers['content-type'] || req.headers['Content-Type']);
+    console.log('createProjectWithUpload: req.file =', req.file);
+
     if (!title || !summary) {
       return res.status(400).json({ message: 'Title and summary are required' });
     }
@@ -95,10 +99,24 @@ export const createProjectWithUpload = async (req, res) => {
     // If a file was uploaded by multer/cloudinary, it will be available as req.file
     let fileUrl = null;
     let fileName = null;
+
+    // If the request was multipart but multer didn't populate req.file, treat as upload failure
+    const isMultipart = String(req.headers['content-type'] || '').includes('multipart/form-data');
+    if (isMultipart && !req.file) {
+      console.error('createProjectWithUpload: multipart request received but req.file is missing. Possible upload error or size limit.');
+      return res.status(500).json({ message: 'File upload failed or exceeded size limit' });
+    }
+
     if (req.file) {
-      // multer-storage-cloudinary typically sets a 'path' with URL; handle common variants
-      fileUrl = req.file.path || req.file.secure_url || req.file.url || req.file?.location || null;
-      fileName = req.file.originalname || req.file.filename || req.file?.public_id || null;
+      // multer-storage-cloudinary typically sets a 'path' or 'secure_url' with URL; handle common variants
+      fileUrl = req.file.path || req.file.secure_url || req.file.url || req.file.location || null;
+      fileName = req.file.originalname || req.file.filename || req.file.public_id || null;
+
+      // If req.file exists but we could not find a URL, log and return error to make the failure visible
+      if (!fileUrl) {
+        console.error('createProjectWithUpload: req.file present but no URL found on file object', req.file);
+        return res.status(500).json({ message: 'File was uploaded but no accessible URL was returned by the storage engine' });
+      }
     }
 
     const newProject = new Project({ title, client: clientValue, summary, assignedReviewers, submittedBy: submitter || null, clientEmail: effectiveClientEmail, fileUrl, fileName });
