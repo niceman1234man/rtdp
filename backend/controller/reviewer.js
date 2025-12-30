@@ -29,7 +29,7 @@ export const createReviewer = async (req, res) => {
           auth: { user: process.env.USER_EMAIL, pass: process.env.PASSWORD }
         });
         const subject = `Your reviewer account for Review Team`;
-        const frontend = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const frontend = process.env.FRONTEND_URL || 'https://rtdp.netlify.app';
         const loginUrl = `${frontend}/login`;
         const html = `
           <div style="font-family: sans-serif; color: #333;">

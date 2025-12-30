@@ -259,7 +259,7 @@ export const decideProject = async (req, res) => {
           auth: { user: process.env.USER_EMAIL, pass: process.env.PASSWORD }
         });
         const subject = `Your project "${populated.title}" has been ${populated.status}`;
-        const frontend = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const frontend = process.env.FRONTEND_URL || 'https://rtdp.netlify.app';
         const projectUrl = `${frontend}/projects/${populated._id}`;
         const html = `
           <div style="font-family: sans-serif; color: #333;">
@@ -307,7 +307,7 @@ export const notifyProject = async (req, res) => {
           auth: { user: process.env.USER_EMAIL, pass: process.env.PASSWORD }
         });
         const subject = `Notification regarding your project "${project.title}"`;
-        const frontend = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const frontend = process.env.FRONTEND_URL || 'https://rtdp.netlify.app'
         const projectUrl = `${frontend}/projects/${project._id}`;
         const html = `
           <div style="font-family: sans-serif; color: #333;">

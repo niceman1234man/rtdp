@@ -142,8 +142,16 @@ function Login({ onClose, isVisitor = false, onLogin }) {
               navigate("/user-dashboard");
               break;
             // default fallback routes for other roles
+              
+            case "admin":
+              navigate("/admin-dashboard");
+              break;
+
+            case "reviewer":
+              navigate("/reviewer-dashboard");
+              break;
             default:
-              navigate("/");
+              navigate("/login");
               break;
           }
         } else {

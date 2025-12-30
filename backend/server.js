@@ -11,7 +11,7 @@ app.use(express.json());
 // get the proper Access-Control-Allow-* headers.
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:5174"],
+    origin: ["https://rtdp.netlify.app"],
     credentials: true,
   })
 );

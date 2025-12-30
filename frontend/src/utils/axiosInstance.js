@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = "https://rtdp.onrender.com";
 
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
