@@ -76,7 +76,6 @@ function UserDashboard() {
         form.append('file', file)
 
         res = await axiosInstance.post('/api/projects/upload', form, {
-          headers: { 'Content-Type': 'multipart/form-data' },
           timeout: 120000, // increase timeout for uploads (120s)
           onUploadProgress: (progressEvent) => {
             if (progressEvent.total) {
