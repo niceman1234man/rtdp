@@ -9,7 +9,8 @@ projectRouter.post('/', createProject);
 // Route to create a new project with a file upload (multipart/form-data) - requires auth
 projectRouter.post('/upload', requireAuth, upload.single('file'), createProjectWithUpload);
 // Update / delete projects require authentication
-projectRouter.put('/:id', requireAuth, updateProject);
+// Allow file replacement on update via multipart/form-data
+projectRouter.put('/:id', requireAuth, upload.single('file'), updateProject);
 projectRouter.delete('/:id', requireAuth, deleteProject);
 // Route to get all projects (supports ?assignedTo=<id|me>)
 projectRouter.get('/', getAllProjects);

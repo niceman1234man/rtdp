@@ -3,6 +3,7 @@ import Reviewer from '../model/Reviewer.js';
 import User from '../model/User.js';
 import nodemailer from 'nodemailer';
 import jwt from 'jsonwebtoken';
+import { cloudinary } from '../config/cloudinary.js';
 export const createProject = async (req, res) => {
   try {
     const { title, client, summary, assignedReviewers, submittedBy, clientEmail } = req.body;
@@ -364,25 +365,75 @@ export const setProjectSubmitter = async (req, res) => {
 }
 
 export const updateProject = async (req, res) => {
-    try {
-    const project = await Project.findByIdAndUpdate(req.params.id, req.body
-, { new: true });
+  try {
+    const project = await Project.findById(req.params.id);
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
     }
-    res.status(200).json(project);
-    } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+
+    // If a new file was uploaded, remove the previous file from Cloudinary (if present)
+    if (req.file) {
+      if (project.fileUrl) {
+        try {
+          const parts = project.fileUrl.split('/');
+          const fileName = parts.pop();
+          const folder = parts.pop();
+          const publicId = fileName.split('.')[0];
+          const isPdf = /\.pdf$/i.test(fileName);
+          const resourceType = isPdf ? 'raw' : 'image';
+          const publicIdWithFolder = folder ? `${folder}/${publicId}` : publicId;
+          await cloudinary.uploader.destroy(publicIdWithFolder, { resource_type: resourceType });
+        } catch (e) {
+          console.warn('Failed to delete old file from Cloudinary:', e?.message || e);
+        }
+      }
+
+      // store new file info from multer/cloudinary
+      project.fileUrl = req.file.path || req.file.secure_url || req.file.url || req.file?.location || project.fileUrl;
+      project.fileName = req.file.originalname || req.file.filename || req.file?.public_id || project.fileName;
     }
+
+    // Update provided fields
+    const updatable = ['title', 'summary', 'client', 'status', 'assignedReviewers', 'clientEmail'];
+    updatable.forEach(k => {
+      if (Object.prototype.hasOwnProperty.call(req.body, k)) project[k] = req.body[k];
+    });
+
+    await project.save();
+    const populated = await Project.findById(project._id).populate('submittedBy','firstName lastName email').populate('assignedReviewers');
+    res.status(200).json(populated);
+  } catch (error) {
+    console.error('Error updating project:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 }
 export const deleteProject = async (req, res) => {
   try {
-    const project = await Project.findByIdAndDelete(req.params.id);
+    const project = await Project.findById(req.params.id);
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
     }
-    res.status(200).json({ message: 'Project deleted' });
-    } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+
+    // Remove file from Cloudinary if present
+    if (project.fileUrl) {
+      try {
+        const parts = project.fileUrl.split('/');
+        const fileName = parts.pop();
+        const folder = parts.pop();
+        const publicId = fileName.split('.')[0];
+        const isPdf = /\.pdf$/i.test(fileName);
+        const resourceType = isPdf ? 'raw' : 'image';
+        const publicIdWithFolder = folder ? `${folder}/${publicId}` : publicId;
+        await cloudinary.uploader.destroy(publicIdWithFolder, { resource_type: resourceType });
+      } catch (e) {
+        console.warn('Failed to delete file from Cloudinary:', e?.message || e);
+      }
     }
+
+    await Project.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: 'Project deleted' });
+  } catch (error) {
+    console.error('Error deleting project:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 }
