@@ -1,6 +1,6 @@
 import express from 'express';
 const projectRouter = express.Router();
-import { createProject, createProjectWithUpload, getAllProjects,getProjectById,deleteProject,updateProject, getReviews, addReview, assignReviewer, decideProject, unassignReviewer, notifyProject, setProjectSubmitter } from '../controller/project.js'
+import { createProject, createProjectWithUpload, uploadProjectFile, getAllProjects,getProjectById,deleteProject,updateProject, getReviews, addReview, assignReviewer, decideProject, unassignReviewer, notifyProject, setProjectSubmitter } from '../controller/project.js'
 import { upload } from '../config/cloudinary.js'
 import { requireAuth, requireRole } from '../middleware/auth.js'
 
@@ -32,5 +32,8 @@ projectRouter.post('/:id/unassign', requireAuth, requireRole('admin'), unassignR
 projectRouter.post('/:id/decision', requireAuth, requireRole('admin'), decideProject);
 projectRouter.post('/:id/notify', requireAuth, requireRole('admin'), notifyProject);
 projectRouter.post('/:id/set-submitter', requireAuth, requireRole('admin'), setProjectSubmitter);
+
+// Upload or replace file for an existing project (owner or admin)
+projectRouter.post('/:id/upload', requireAuth, upload.single('file'), uploadProjectFile);
 
 export default projectRouter;

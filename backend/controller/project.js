@@ -128,6 +128,50 @@ export const createProjectWithUpload = async (req, res) => {
     res.status(500).json({ message: error?.message || 'Server error' });
   }
 }
+
+// Attach or replace a file for an existing project
+export const uploadProjectFile = async (req, res) => {
+  try {
+    console.log('uploadProjectFile: content-type =', req.headers['content-type'] || req.headers['Content-Type']);
+    console.log('uploadProjectFile: req.file =', req.file);
+
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+
+    if (!req.file) return res.status(400).json({ message: 'File is required' });
+
+    // Delete old file from Cloudinary if present
+    if (project.fileUrl) {
+      try {
+        const parts = project.fileUrl.split('/');
+        const fileName = parts.pop();
+        const folder = parts.pop();
+        const publicId = fileName.split('.')[0];
+        const isPdf = /\.pdf$/i.test(fileName);
+        const resourceType = isPdf ? 'raw' : 'image';
+        const publicIdWithFolder = folder ? `${folder}/${publicId}` : publicId;
+        await cloudinary.uploader.destroy(publicIdWithFolder, { resource_type: resourceType });
+      } catch (e) {
+        console.warn('Failed to delete old file from Cloudinary before uploadProjectFile:', e?.message || e);
+      }
+    }
+
+    const fileUrl = req.file.path || req.file.secure_url || req.file.url || req.file.location || null;
+    const fileName = req.file.originalname || req.file.filename || req.file.public_id || null;
+
+    if (!fileUrl) return res.status(500).json({ message: 'Uploaded but storage did not return a URL' });
+
+    project.fileUrl = fileUrl;
+    project.fileName = fileName;
+    await project.save();
+
+    const populated = await Project.findById(project._id).populate('submittedBy', 'firstName lastName email').populate('assignedReviewers')
+    res.status(200).json(populated);
+  } catch (error) {
+    console.error('Error in uploadProjectFile:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+}
   
 export const getAllProjects = async (req, res) => {
   try {
