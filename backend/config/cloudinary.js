@@ -1,13 +1,13 @@
 // backend/config/cloudinary.js
 import cloudinaryPkg from 'cloudinary'
 import multer from 'multer'
-import multerStorageCloudinary from 'multer-storage-cloudinary'
+import cloudinaryStoragePkg from 'multer-storage-cloudinary'
 import dotenv from 'dotenv'
 
 dotenv.config()
 
-const { CloudinaryStorage } = multerStorageCloudinary
 const cloudinary = cloudinaryPkg.v2
+const { cloudinaryStorage } = cloudinaryStoragePkg
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -15,15 +15,19 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 })
 
-const storage = new CloudinaryStorage({
+// ✅ FUNCTION-BASED STORAGE (NEW API)
+const storage = cloudinaryStorage({
   cloudinary,
-  params: async (req, file) => ({
+  params: {
     folder: 'rtdp-documents',
     resource_type: 'raw', // ✅ documents only
-    public_id: `${Date.now()}-${file.originalname}`,
-  }),
+    allowed_formats: ['pdf', 'doc', 'docx'],
+    public_id: (req, file) =>
+      `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`,
+  },
 })
 
+// 🔐 File validation (extra safety)
 const fileFilter = (req, file, cb) => {
   const allowedTypes = [
     'application/pdf',
@@ -41,7 +45,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB (Render safe)
 })
 
 export { cloudinary, upload }
