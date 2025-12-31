@@ -2,7 +2,6 @@ import Project from "../model/Project.js";
 import Reviewer from '../model/Reviewer.js';
 import User from '../model/User.js';
 import nodemailer from 'nodemailer';
-import jwt from 'jsonwebtoken';
 import { cloudinary } from '../config/cloudinary.js';
 export const createProject = async (req, res) => {
   try {
@@ -11,8 +10,7 @@ export const createProject = async (req, res) => {
     if (!title || !summary) {
       return res.status(400).json({ message: 'Title and summary are required' })
     }
-
-    // User from JWT
+    
     const userId = req.user.userId
     const user = await User.findById(userId)
 
@@ -20,20 +18,12 @@ export const createProject = async (req, res) => {
       return res.status(404).json({ message: 'User not found' })
     }
 
-    // File
-    let fileUrl = null
-    let fileName = null
-
-    if (req.file) {
-      fileUrl = req.file.path
-      fileName = req.file.originalname
-    }
 
     const project = await Project.create({
-      title,
-      summary,
-      fileUrl,
-      fileName,
+   
+      title: req.body.title,
+      summary: req.body.summary,
+      document: req.file ? req.file.path : "", // Cloudinary gives full URL
       submittedBy: user._id,
       client: user.company || 'Individual',
       clientEmail: user.email,
