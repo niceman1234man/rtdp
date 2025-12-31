@@ -64,7 +64,7 @@ const handleSubmit = async (e) => {
     const formData = new FormData()
     formData.append('title', title)
     formData.append('summary', summary)
-    if (file) formData.append('file', file)
+    if (file) formData.append('document', file)
 
     const res = await axiosInstance.post('/api/projects', formData, {
      
