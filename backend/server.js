@@ -37,7 +37,7 @@ app.use(express.urlencoded({ extended: true }))
 /* =======================
    AUTH
 ======================= */
-app.use(authMiddleware)
+// app.use(authMiddleware)
 
 /* =======================
    ROUTES
