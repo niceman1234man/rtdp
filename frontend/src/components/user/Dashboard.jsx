@@ -49,65 +49,54 @@ function UserDashboard() {
     setFile(e.target.files[0] || null)
   }
 
- const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!title.trim() || !summary.trim()) {
-      toast.error('Please provide title and summary')
-      return
-    }
-    setSubmitting(true)
-    setError('')
-    setUploadProgress(0)
-    try {
-      const stored = localStorage.getItem('user')
-      let submittedBy = null, clientEmail = null
-      if (stored) {
-        try { const u = JSON.parse(stored); submittedBy = u._id || u.id || null; clientEmail = u.email || null } catch (e) {}
-      }
+const handleSubmit = async (e) => {
+  e.preventDefault()
 
-      let res
-      if (file) {
-        // upload via backend multipart endpoint that uses Cloudinary
-        const form = new FormData()
-        form.append('title', title)
-        form.append('summary', summary)
-        if (submittedBy) form.append('submittedBy', submittedBy)
-        if (clientEmail) form.append('clientEmail', clientEmail)
-        form.append('file', file)
-
-        res = await axiosInstance.post('/api/projects/upload', form, {
-          timeout: 120000, // increase timeout for uploads (120s)
-          onUploadProgress: (progressEvent) => {
-            if (progressEvent.total) {
-              const pct = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-              setUploadProgress(pct)
-            }
-          }
-        })
-      } else {
-        const payload = { title, summary, submittedBy, clientEmail }
-        res = await axiosInstance.post('/api/projects', payload)
-      }
-
-      let created = res.data || { id: Math.random(), title, summary, status: 'submitted', submittedAt: new Date().toISOString().slice(0,10) }
-      created.id = created._id || created.id
-      setProjects(ps => [created, ...ps])
-      setTitle('')
-      setSummary('')
-      setFile(null)
-      setUploadProgress(0)
-      if (fileRef.current) fileRef.current.value = ''
-      toast.success('Project submitted')
-    } catch (err) {
-      console.error('Submit failed', err)
-      const isTimeout = err?.code === 'ECONNABORTED' || String(err?.message || '').toLowerCase().includes('timeout')
-      const msg = isTimeout ? 'Upload timed out. Try again with a smaller file or check your connection.' : (err?.response?.data?.message || 'Failed to submit project. Please try again.')
-      setError(msg)
-      toast.error(msg)
-    } finally {
-      setSubmitting(false)
-    }
+  if (!title.trim() || !summary.trim()) {
+    toast.error('Title and summary are required')
+    return
   }
+
+  setSubmitting(true)
+  setUploadProgress(0)
+
+  try {
+    const formData = new FormData()
+    formData.append('title', title)
+    formData.append('summary', summary)
+    if (file) formData.append('file', file)
+
+    const res = await axiosInstance.post('/api/projects', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (e) => {
+        if (e.total) {
+          setUploadProgress(Math.round((e.loaded * 100) / e.total))
+        }
+      },
+      timeout: 120000,
+    })
+
+    setProjects((prev) => [
+      { ...res.data, id: res.data._id },
+      ...prev,
+    ])
+
+    setTitle('')
+    setSummary('')
+    setFile(null)
+    setUploadProgress(0)
+    if (fileRef.current) fileRef.current.value = ''
+
+    toast.success('Project submitted successfully')
+  } catch (err) {
+    const msg =
+      err?.response?.data?.message || 'Failed to submit project'
+    toast.error(msg)
+  } finally {
+    setSubmitting(false)
+  }
+}
+
 
   const openEditProject = (p) => {
     setEditingProject(p)

@@ -6,173 +6,53 @@ import jwt from 'jsonwebtoken';
 import { cloudinary } from '../config/cloudinary.js';
 export const createProject = async (req, res) => {
   try {
-    const { title, client, summary, assignedReviewers, submittedBy, clientEmail } = req.body;
-
-    // Basic validation so the client gets a clear 400 when fields are missing
-    if (!title || !summary) {
-      return res.status(400).json({ message: 'Title and summary are required' });
-    }
-
-    // Resolve submitter: prefer explicit body value, then req.user (middleware), then Authorization token
-    let submitter = submittedBy || null;
-    if ((!submitter || submitter === null) && req.user && req.user.userId) submitter = req.user.userId;
-
-    // If still not present, try to decode Authorization Bearer token
-    if ((!submitter || submitter === null) && req.headers && req.headers.authorization) {
-      try {
-        const auth = String(req.headers.authorization || '');
-        const parts = auth.split(' ');
-        const token = parts.length === 2 ? parts[1] : parts[0];
-        const secret = process.env.ACCESS_TOKEN_SECRET || process.env.TOKEN_SECRET || 'dev-secret';
-        const decoded = jwt.verify(token, secret);
-        if (decoded) {
-          submitter = decoded.userId || decoded.id || decoded._id || submitter;
-        }
-      } catch (e) {
-        // ignore token parse/verify errors — project creation should still succeed without a submitter
-        console.warn('Could not decode auth token for createProject:', e?.message || e);
-      }
-    }
-
-    // provide a safe default for client when not supplied to avoid mongoose validation errors
-    const clientValue = client || clientEmail || 'Individual';
-
-    // If we resolved a submitter id but no explicit client email, try to resolve email from user profile
-    let effectiveClientEmail = clientEmail || null;
-    if (!effectiveClientEmail && submitter) {
-      try {
-        const u = await User.findById(submitter);
-        if (u && u.email) effectiveClientEmail = u.email;
-      } catch (e) {
-        // ignore lookup errors
-      }
-    }
-
-    const newProject = new Project({ title, client: clientValue, summary, assignedReviewers, submittedBy: submitter || null, clientEmail: effectiveClientEmail });
-    await newProject.save();
-    const populated = await Project.findById(newProject._id).populate('submittedBy', 'firstName lastName email').populate('assignedReviewers')
-    res.status(201).json(populated);
-    } catch (error) {
-    console.error('Error in createProject:', error);
-    const errMsg = error?.message || 'Server error';
-    res.status(500).json({ message: errMsg });
-    }
-}
-
-// Create a project and accept a multipart file upload (Cloudinary via multer-storage-cloudinary)
-export const createProjectWithUpload = async (req, res) => {
-  try {
-    // req.body may come from multipart/form-data
-    const { title, client, summary, assignedReviewers, submittedBy, clientEmail } = req.body;
-
-    // Log helpful diagnostics for upload debugging
-    console.log('createProjectWithUpload: content-type =', req.headers['content-type'] || req.headers['Content-Type']);
-    console.log('createProjectWithUpload: req.file =', req.file);
+    const { title, summary } = req.body
 
     if (!title || !summary) {
-      return res.status(400).json({ message: 'Title and summary are required' });
+      return res.status(400).json({ message: 'Title and summary are required' })
     }
 
-    // resolve submitter similar to createProject
-    let submitter = submittedBy || null;
-    if ((!submitter || submitter === null) && req.user && req.user.userId) submitter = req.user.userId;
+    // User from JWT
+    const userId = req.user.userId
+    const user = await User.findById(userId)
 
-    if ((!submitter || submitter === null) && req.headers && req.headers.authorization) {
-      try {
-        const auth = String(req.headers.authorization || '');
-        const parts = auth.split(' ');
-        const token = parts.length === 2 ? parts[1] : parts[0];
-        const secret = process.env.ACCESS_TOKEN_SECRET || process.env.TOKEN_SECRET || 'dev-secret';
-        const decoded = jwt.verify(token, secret);
-        if (decoded) submitter = decoded.userId || decoded.id || decoded._id || submitter;
-      } catch (e) {
-        // ignore
-      }
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' })
     }
 
-    const clientValue = client || clientEmail || 'Individual';
-    let effectiveClientEmail = clientEmail || null;
-    if (!effectiveClientEmail && submitter) {
-      try { const u = await User.findById(submitter); if (u && u.email) effectiveClientEmail = u.email } catch (e) {}
-    }
-
-    // If a file was uploaded by multer/cloudinary, it will be available as req.file
-    let fileUrl = null;
-    let fileName = null;
-
-    // If the request was multipart but multer didn't populate req.file, treat as upload failure
-    const isMultipart = String(req.headers['content-type'] || '').includes('multipart/form-data');
-    if (isMultipart && !req.file) {
-      console.error('createProjectWithUpload: multipart request received but req.file is missing. Possible upload error or size limit.');
-      return res.status(500).json({ message: 'File upload failed or exceeded size limit' });
-    }
+    // File
+    let fileUrl = null
+    let fileName = null
 
     if (req.file) {
-      // multer-storage-cloudinary typically sets a 'path' or 'secure_url' with URL; handle common variants
-      fileUrl = req.file.path || req.file.secure_url || req.file.url || req.file.location || null;
-      fileName = req.file.originalname || req.file.filename || req.file.public_id || null;
-
-      // If req.file exists but we could not find a URL, log and return error to make the failure visible
-      if (!fileUrl) {
-        console.error('createProjectWithUpload: req.file present but no URL found on file object', req.file);
-        return res.status(500).json({ message: 'File was uploaded but no accessible URL was returned by the storage engine' });
-      }
+      fileUrl = req.file.path
+      fileName = req.file.originalname
     }
 
-    const newProject = new Project({ title, client: clientValue, summary, assignedReviewers, submittedBy: submitter || null, clientEmail: effectiveClientEmail, fileUrl, fileName });
-    await newProject.save();
-    const populated = await Project.findById(newProject._id).populate('submittedBy', 'firstName lastName email').populate('assignedReviewers')
-    res.status(201).json(populated);
+    const project = await Project.create({
+      title,
+      summary,
+      fileUrl,
+      fileName,
+      submittedBy: user._id,
+      client: user.company || 'Individual',
+      clientEmail: user.email,
+      assignedReviewers: user.assignedReviewers || [],
+    })
+
+    const populated = await Project.findById(project._id)
+      .populate('submittedBy', 'firstName lastName email')
+      .populate('assignedReviewers')
+
+    res.status(201).json(populated)
   } catch (error) {
-    console.error('Error in createProjectWithUpload:', error);
-    res.status(500).json({ message: error?.message || 'Server error' });
+    console.error('createProject error:', error)
+    res.status(500).json({ message: 'Server error' })
   }
 }
 
-// Attach or replace a file for an existing project
-export const uploadProjectFile = async (req, res) => {
-  try {
-    console.log('uploadProjectFile: content-type =', req.headers['content-type'] || req.headers['Content-Type']);
-    console.log('uploadProjectFile: req.file =', req.file);
 
-    const project = await Project.findById(req.params.id);
-    if (!project) return res.status(404).json({ message: 'Project not found' });
 
-    if (!req.file) return res.status(400).json({ message: 'File is required' });
-
-    // Delete old file from Cloudinary if present
-    if (project.fileUrl) {
-      try {
-        const parts = project.fileUrl.split('/');
-        const fileName = parts.pop();
-        const folder = parts.pop();
-        const publicId = fileName.split('.')[0];
-        const isPdf = /\.pdf$/i.test(fileName);
-        const resourceType = isPdf ? 'raw' : 'image';
-        const publicIdWithFolder = folder ? `${folder}/${publicId}` : publicId;
-        await cloudinary.uploader.destroy(publicIdWithFolder, { resource_type: resourceType });
-      } catch (e) {
-        console.warn('Failed to delete old file from Cloudinary before uploadProjectFile:', e?.message || e);
-      }
-    }
-
-    const fileUrl = req.file.path || req.file.secure_url || req.file.url || req.file.location || null;
-    const fileName = req.file.originalname || req.file.filename || req.file.public_id || null;
-
-    if (!fileUrl) return res.status(500).json({ message: 'Uploaded but storage did not return a URL' });
-
-    project.fileUrl = fileUrl;
-    project.fileName = fileName;
-    await project.save();
-
-    const populated = await Project.findById(project._id).populate('submittedBy', 'firstName lastName email').populate('assignedReviewers')
-    res.status(200).json(populated);
-  } catch (error) {
-    console.error('Error in uploadProjectFile:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-}
-  
 export const getAllProjects = async (req, res) => {
   try {
     const { assignedTo } = req.query;

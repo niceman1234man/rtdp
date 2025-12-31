@@ -1,15 +1,11 @@
 import express from 'express';
 const projectRouter = express.Router();
-import { createProject, createProjectWithUpload, uploadProjectFile, getAllProjects,getProjectById,deleteProject,updateProject, getReviews, addReview, assignReviewer, decideProject, unassignReviewer, notifyProject, setProjectSubmitter } from '../controller/project.js'
+import { createProje, uploadProjectFile, getAllProjects,getProjectById,deleteProject,updateProject, getReviews, addReview, assignReviewer, decideProject, unassignReviewer, notifyProject, setProjectSubmitter } from '../controller/project.js'
 import { upload } from '../config/cloudinary.js'
 import { requireAuth, requireRole } from '../middleware/auth.js'
 
 // Route to create a new project (simple JSON)
-projectRouter.post('/', createProject);
-// Route to create a new project with a file upload (multipart/form-data) - requires auth
-projectRouter.post('/upload', requireAuth, upload.single('file'), createProjectWithUpload);
-// Update / delete projects require authentication
-// Allow file replacement on update via multipart/form-data
+projectRouter.post('/upload', requireAuth, upload.single('file'), createProject);
 projectRouter.put('/:id', requireAuth, upload.single('file'), updateProject);
 projectRouter.delete('/:id', requireAuth, deleteProject);
 // Route to get all projects (supports ?assignedTo=<id|me>)
