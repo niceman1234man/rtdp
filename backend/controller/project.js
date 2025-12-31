@@ -10,20 +10,15 @@ export const createProject = async (req, res) => {
     if (!title || !summary) {
       return res.status(400).json({ message: 'Title and summary are required' })
     }
-    
-    const userId = req.user.userId
-    const user = await User.findById(userId)
 
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' })
-    }
-
+    if (!req.user) return res.status(401).json({ message: 'Unauthorized' })
+    const user = await User.findById(req.user.userId)
+    if (!user) return res.status(404).json({ message: 'User not found' })
 
     const project = await Project.create({
-   
-      title: req.body.title,
-      summary: req.body.summary,
-      document: req.file ? req.file.path : "", // Cloudinary gives full URL
+      title,
+      summary,
+      document: req.file ? req.file.path : "", // multer file path
       submittedBy: user._id,
       client: user.company || 'Individual',
       clientEmail: user.email,
@@ -40,6 +35,7 @@ export const createProject = async (req, res) => {
     res.status(500).json({ message: 'Server error' })
   }
 }
+
 
 
 
