@@ -8,34 +8,48 @@ import authMiddleware from './middleware/auth.js'
 
 const app = express()
 
-// ✅ CORS FIRST
-app.use(cors({
-  origin: [
-    'https://rtdp.netlify.app',
-    
-  ],
+/* =======================
+   CORS CONFIG (FIXED)
+======================= */
+const corsOptions = {
+  origin: 'https://rtdp.netlify.app',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-}))
+}
 
+app.use(cors(corsOptions))
 
+// IMPORTANT: handle preflight safely
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204)
+  }
+  next()
+})
 
-// ✅ Body parsers
+/* =======================
+   BODY PARSERS
+======================= */
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
-// ✅ Auth middleware AFTER CORS
+/* =======================
+   AUTH
+======================= */
 app.use(authMiddleware)
 
-// ✅ Routes
+/* =======================
+   ROUTES
+======================= */
 app.use('/api/projects', projectRouter)
 app.use('/api/users', userRouter)
 app.use('/api/reviewers', reviewerRouter)
 
-// ✅ DB + server
+/* =======================
+   START SERVER
+======================= */
 connectDb()
-
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)

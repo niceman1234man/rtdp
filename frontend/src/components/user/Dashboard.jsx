@@ -67,7 +67,7 @@ const handleSubmit = async (e) => {
     if (file) formData.append('file', file)
 
     const res = await axiosInstance.post('/api/projects', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+     
       onUploadProgress: (e) => {
         if (e.total) {
           setUploadProgress(Math.round((e.loaded * 100) / e.total))
