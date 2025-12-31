@@ -13,8 +13,12 @@ app.use(
   cors({
     origin: ["https://rtdp.netlify.app"],
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
   })
 );
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 
 // lightweight auth middleware to populate req.user when Authorization header is present
 import authMiddleware from './middleware/auth.js';
