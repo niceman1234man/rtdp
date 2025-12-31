@@ -1,6 +1,6 @@
 import express from 'express';
 const projectRouter = express.Router();
-import { createProje, uploadProjectFile, getAllProjects,getProjectById,deleteProject,updateProject, getReviews, addReview, assignReviewer, decideProject, unassignReviewer, notifyProject, setProjectSubmitter } from '../controller/project.js'
+import { createProject, getAllProjects,getProjectById,deleteProject,updateProject, getReviews, addReview, assignReviewer, decideProject, unassignReviewer, notifyProject, setProjectSubmitter } from '../controller/project.js'
 import { upload } from '../config/cloudinary.js'
 import { requireAuth, requireRole } from '../middleware/auth.js'
 
@@ -29,7 +29,7 @@ projectRouter.post('/:id/decision', requireAuth, requireRole('admin'), decidePro
 projectRouter.post('/:id/notify', requireAuth, requireRole('admin'), notifyProject);
 projectRouter.post('/:id/set-submitter', requireAuth, requireRole('admin'), setProjectSubmitter);
 
-// Upload or replace file for an existing project (owner or admin)
-projectRouter.post('/:id/upload', requireAuth, upload.single('file'), uploadProjectFile);
+// // Upload or replace file for an existing project (owner or admin)
+// projectRouter.post('/:id/upload', requireAuth, upload.single('file'), uploadProjectFile);
 
 export default projectRouter;
