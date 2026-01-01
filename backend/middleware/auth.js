@@ -1,30 +1,44 @@
 import jwt from 'jsonwebtoken';
 
+
 export default function authMiddleware(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    console.warn("No Authorization header");
+    return next();
+  }
+  const [scheme, token] = authHeader.split(" ");
+  if (scheme !== "Bearer" || !token) {
+    console.warn("Invalid auth header format");
+    return next();
+  }
   try {
-    const auth = String(req.headers.authorization || '');
-    if (!auth) return next();
-    const parts = auth.split(' ');
-    const token = parts.length === 2 ? parts[1] : parts[0];
-    if (!token) return next();
-    const secret = process.env.ACCESS_TOKEN_SECRET || process.env.TOKEN_SECRET || 'dev-secret';
+    const secret = process.env.ACCESS_TOKEN_SECRET || process.env.TOKEN_SECRET || "dev-secret";
     const decoded = jwt.verify(token, secret);
-    if (decoded) {
-      req.user = { userId: decoded.userId || decoded.id || decoded._id, email: decoded.email, role: decoded.role };
-    }
-  } catch (e) {
-    // ignore token errors — we don't want to block requests, just won't set req.user
-    console.warn('authMiddleware: token parse failed', e?.message || e);
+    console.log("Decoded JWT:", decoded);
+    req.user = {
+      userId: decoded.userId || decoded.id || decoded._id,
+      email: decoded.email,
+      role: decoded.role,
+    };
+  } catch (err) {
+    console.warn("JWT verification failed:", err.message);
+    return res.status(401).json({ message: "Invalid or expired token" });
   }
   next();
 }
 
 export function requireAuth(req, res, next) {
+  console.log("AUTH HEADER:", req.headers.authorization);
+  console.log("REQ USER:", req.user);
+
   if (!req.user || !req.user.userId) {
-    return res.status(401).json({ message: 'Authentication required' });
+    return res.status(401).json({ message: "Authentication required" });
   }
   next();
 }
+
+
 
 export function requireRole(role) {
   return (req, res, next) => {

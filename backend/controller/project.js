@@ -7,8 +7,19 @@ export const createProject = async (req, res) => {
   try {
     const { title, summary } = req.body
 
+    // debug logging to inspect uploaded file and auth during submission
+    console.log('--- createProject called ---')
+    console.log('AUTH HEADER:', req.headers.authorization)
+    console.log('REQ.USER:', req.user)
+    console.log('REQ.FILE:', req.file)
+
     if (!title || !summary) {
       return res.status(400).json({ message: 'Title and summary are required' })
+    }
+
+    // enforce uploaded document is provided
+    if (!req.file) {
+      return res.status(400).json({ message: 'Document file is required' })
     }
 
     if (!req.user) return res.status(401).json({ message: 'Unauthorized' })
@@ -18,7 +29,9 @@ export const createProject = async (req, res) => {
     const project = await Project.create({
       title,
       summary,
-      document: req.file ? req.file.path : "", // multer file path
+      // multer / cloudinary may set different properties depending on storage plugin
+      document: req.file ? (req.file.path || req.file.secure_url || req.file.url || req.file.location || "") : "",
+      public_id: req.file ? (req.file.public_id || req.file.filename || req.file.originalname || "") : "",
       submittedBy: user._id,
       client: user.company || 'Individual',
       clientEmail: user.email,
@@ -301,9 +314,9 @@ export const updateProject = async (req, res) => {
 
     // If a new file was uploaded, remove the previous file from Cloudinary (if present)
     if (req.file) {
-      if (project.fileUrl) {
+      if (project.document) {
         try {
-          const parts = project.fileUrl.split('/');
+          const parts = project.document.split('/');
           const fileName = parts.pop();
           const folder = parts.pop();
           const publicId = fileName.split('.')[0];
@@ -317,8 +330,8 @@ export const updateProject = async (req, res) => {
       }
 
       // store new file info from multer/cloudinary
-      project.fileUrl = req.file.path || req.file.secure_url || req.file.url || req.file?.location || project.fileUrl;
-      project.fileName = req.file.originalname || req.file.filename || req.file?.public_id || project.fileName;
+      project.document = req.file.path || req.file.secure_url || req.file.url || req.file?.location || project.document;
+      project.public_id = req.file.public_id || req.file.filename || project.public_id;
     }
 
     // Update provided fields
@@ -343,9 +356,9 @@ export const deleteProject = async (req, res) => {
     }
 
     // Remove file from Cloudinary if present
-    if (project.fileUrl) {
+    if (project.document) {
       try {
-        const parts = project.fileUrl.split('/');
+        const parts = project.document.split('/');
         const fileName = parts.pop();
         const folder = parts.pop();
         const publicId = fileName.split('.')[0];

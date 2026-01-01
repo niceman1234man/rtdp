@@ -9,7 +9,7 @@ const projectSchema = new mongoose.Schema({
   assignedReviewers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Reviewer' }],
   submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   clientEmail: { type: String },
-  document: String, // optional image (e.g., client photo or logo)
+  document: { type: String, required: true },
   public_id:String,
   reviews: [{
     reviewerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Reviewer', default: null },

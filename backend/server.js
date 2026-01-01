@@ -12,10 +12,15 @@ const app = express()
    CORS CONFIG (FIXED)
 ======================= */
 const corsOptions = {
-  origin: 'https://rtdp.netlify.app',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+   origin: [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://rtdp.netlify.app',
+      'https://rtdp.onrender.com'
+   ],
+   credentials: true,
+   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+   allowedHeaders: ['Content-Type', 'Authorization'],
 }
 
 app.use(cors(corsOptions))
@@ -37,7 +42,8 @@ app.use(express.urlencoded({ extended: true }))
 /* =======================
    AUTH
 ======================= */
-// app.use(authMiddleware)
+// attach auth middleware globally so routes can rely on `req.user`
+app.use(authMiddleware)
 
 /* =======================
    ROUTES

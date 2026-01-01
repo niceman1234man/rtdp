@@ -1,4 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { CKEditor } from '@ckeditor/ckeditor5-react'
+import ClassicEditor from '@ckeditor/ckeditor5-build-classic'
+import 'katex/dist/katex.min.css'
 import { useNavigate } from 'react-router-dom'
 import axiosInstance from '../../utils/axiosInstance'
 import { FaUpload, FaPlus } from 'react-icons/fa'
@@ -52,8 +55,14 @@ function UserDashboard() {
 const handleSubmit = async (e) => {
   e.preventDefault()
 
-  if (!title.trim() || !summary.trim()) {
+    if (!title.trim() || !summary.trim()) {
     toast.error('Title and summary are required')
+    return
+  }
+
+  // require file attachment
+  if (!file) {
+    toast.error('Document attachment is required')
     return
   }
 
@@ -67,7 +76,6 @@ const handleSubmit = async (e) => {
     if (file) formData.append('document', file)
 
     const res = await axiosInstance.post('/api/projects', formData, {
-     
       onUploadProgress: (e) => {
         if (e.total) {
           setUploadProgress(Math.round((e.loaded * 100) / e.total))
@@ -96,6 +104,7 @@ const handleSubmit = async (e) => {
     setSubmitting(false)
   }
 }
+  // Using CKEditor (Classic build) for rich text editing; editor state bound to `summary`
 
 
   const openEditProject = (p) => {
@@ -165,13 +174,30 @@ const handleSubmit = async (e) => {
               <input value={title} onChange={e => setTitle(e.target.value)} className="mt-1 w-full rounded-md p-2 border border-gray-200" placeholder="Project title" required />
             </div>
             <div>
-              <label className="block text-sm text-gray-700">Summary</label>
-              <textarea value={summary} onChange={e => setSummary(e.target.value)} className="mt-1 w-full rounded-md p-2 border border-gray-200" rows={4} placeholder="Short summary or requirements" required />
+              <label className="block text-sm text-gray-700">Summary (supports bold, superscript/subscript, tables)</label>
+              <div className="mt-1">
+                <div className="border rounded p-2">
+                  <CKEditor
+                    editor={ClassicEditor}
+                    data={summary}
+                    onChange={(event, editor) => {
+                      const data = editor.getData()
+                      setSummary(data)
+                    }}
+                    config={{
+                      toolbar: [
+                        'bold', 'italic', 'superscript', 'subscript', 'insertTable', 'numberedList', 'bulletedList', 'link', 'undo', 'redo', 'fontColor', 'fontBackgroundColor', 'fontSize', 'fontFamily', 'blockQuote'
+                      ]
+                    }}
+                  />
+                </div>
+              </div>
             </div>
             <div>
-              <label className="block text-sm text-gray-700">Attach file (optional)</label>
+              <label className="block text-sm text-gray-700">Attach file </label>
               <div className="mt-1 flex items-center gap-3">
                 <input ref={fileRef} type="file" onChange={handleFile} className="text-sm" />
+                <span className="text-xs text-red-600 ml-2">(required)</span>
                 {file && <span className="text-sm text-gray-600">{file.name}</span>}
                 {uploadProgress > 0 && <span className="text-sm text-gray-600 ml-2">{uploadProgress}% uploaded</span>}
               </div>
@@ -193,7 +219,7 @@ const handleSubmit = async (e) => {
                 <div>
                   <h3 className="text-lg font-medium">{p.title}</h3>
                   <p className="text-sm text-gray-600">{p.summary}</p>
-                  {p.fileUrl && <div className="text-sm mt-1"><a href={p.fileUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600">Attachment</a></div>}
+                  {p.document && <div className="text-sm mt-1"><a href={p.document} target="_blank" rel="noopener noreferrer" className="text-indigo-600">Attachment</a></div>}
                 </div>
                 <div className="mt-3 md:mt-0 flex items-center gap-3">
                   <span className={`px-2 py-1 rounded-full text-xs ${p.status === 'accepted' ? 'bg-green-100 text-green-700' : p.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-50 text-yellow-700'}`}>{p.status}</span>

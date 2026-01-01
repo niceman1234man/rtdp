@@ -1,24 +1,29 @@
-// backend/config/cloudinary.js
-import { v2 as cloudinary } from 'cloudinary';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import cloudinaryPkg from 'cloudinary';
 import multer from 'multer';
+import multerCloudinary from 'multer-storage-cloudinary';
 import dotenv from 'dotenv';
+
 dotenv.config();
 
-cloudinary.config({
+// configure v2 client for direct use in controllers
+const cloudinaryV2 = cloudinaryPkg.v2;
+
+cloudinaryV2.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: 'rtdp-documents',
-    resource_type: 'raw', // documents only
-    allowed_formats: ['pdf', 'doc', 'docx'],
-    public_id: (req, file) => `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`,
-  },
+// For multer-storage-cloudinary we must pass the whole package (so it can access `.v2`)
+const CloudinaryStorage = multerCloudinary.default || multerCloudinary;
+
+const storage = CloudinaryStorage({
+  // pass the package, not the v2 client
+  cloudinary: cloudinaryPkg,
+  folder: 'rtdp-documents',
+  resource_type: 'raw', // for docs
+  allowed_formats: ['pdf', 'doc', 'docx'],
+  public_id: (req, file) => `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`,
 });
 
 const fileFilter = (req, file, cb) => {
@@ -28,9 +33,10 @@ const fileFilter = (req, file, cb) => {
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   ];
   if (!allowedTypes.includes(file.mimetype)) {
-    return cb(new Error('Only PDF, DOC, DOCX files are allowed'), false);
+    cb(new Error('Only PDF, DOC, DOCX files are allowed'), false);
+  } else {
+    cb(null, true);
   }
-  cb(null, true);
 };
 
 const upload = multer({
@@ -39,4 +45,4 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
 
-export { cloudinary, upload };
+export { cloudinaryV2 as cloudinary, upload };

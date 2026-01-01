@@ -5,7 +5,17 @@ import { upload } from '../config/cloudinary.js'
 import { requireAuth, requireRole } from '../middleware/auth.js'
 
 // Route to create a new project (simple JSON)
-projectRouter.post('/', requireAuth, upload.single('document'), createProject);
+projectRouter.post(
+  "/",
+  (req, res, next) => {
+    console.log("🔐 AUTH HEADER:", req.headers.authorization);
+    console.log("👤 USER FROM MIDDLEWARE:", req.user);
+    next();
+  },
+  requireAuth,
+    upload.single('document'),
+  createProject
+);
 
 projectRouter.put('/:id', requireAuth, upload.single('document'), updateProject);
 projectRouter.delete('/:id', requireAuth, deleteProject);
