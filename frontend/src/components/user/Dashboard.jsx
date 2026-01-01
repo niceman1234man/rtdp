@@ -108,6 +108,11 @@ const handleSubmit = async (e) => {
 
 
   const openEditProject = (p) => {
+    // Prevent editing if reviewers have been assigned
+    if (p.assignedReviewers && p.assignedReviewers.length > 0) {
+      toast.error('Project is under review and cannot be edited')
+      return
+    }
     setEditingProject(p)
     setEditTitle(p.title || '')
     setEditSummary(p.summary || '')
@@ -134,6 +139,11 @@ const handleSubmit = async (e) => {
   }
 
   const deleteProject = async (id) => {
+    const p = projects.find(x => x.id === id)
+    if (p && p.assignedReviewers && p.assignedReviewers.length > 0) {
+      toast.error('Project is under review and cannot be deleted')
+      return
+    }
     if (!window.confirm('Delete this project?')) return
     setDeletingProjectId(id)
     try {
@@ -225,8 +235,8 @@ const handleSubmit = async (e) => {
                   <span className={`px-2 py-1 rounded-full text-xs ${p.status === 'accepted' ? 'bg-green-100 text-green-700' : p.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-50 text-yellow-700'}`}>{p.status}</span>
                   <div className="text-sm text-gray-500">{new Date(p.submittedAt).toLocaleDateString()}</div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => openEditProject(p)} className="px-2 py-1 text-sm bg-yellow-100 text-yellow-800 rounded">Edit</button>
-                    <button onClick={() => deleteProject(p.id)} disabled={deletingProjectId===p.id} className="px-2 py-1 text-sm bg-red-100 text-red-700 rounded">{deletingProjectId===p.id ? 'Deleting...' : 'Delete'}</button>
+                    <button onClick={() => openEditProject(p)} disabled={p.assignedReviewers && p.assignedReviewers.length>0} className={`px-2 py-1 text-sm rounded ${p.assignedReviewers && p.assignedReviewers.length>0 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-yellow-100 text-yellow-800'}`}>Edit</button>
+                    <button onClick={() => deleteProject(p.id)} disabled={deletingProjectId===p.id || (p.assignedReviewers && p.assignedReviewers.length>0)} className={`px-2 py-1 text-sm rounded ${deletingProjectId===p.id ? 'bg-gray-300 text-gray-600' : (p.assignedReviewers && p.assignedReviewers.length>0 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-red-100 text-red-700')}`}>{deletingProjectId===p.id ? 'Deleting...' : 'Delete'}</button>
                   </div>
                 </div> 
               </div>

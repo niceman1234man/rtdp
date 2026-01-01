@@ -35,6 +35,20 @@ function AdminDashboard() {
     fetchData()
   }, [])
 
+  // Ensure no stale modal state remains on mount and support Esc to close
+  useEffect(() => {
+    setSelectedProject(null)
+    setEditingReviewer(null)
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        setSelectedProject(null)
+        setEditingReviewer(null)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   const fetchData = async () => {
     setLoading(true)
     try {
@@ -77,6 +91,12 @@ function AdminDashboard() {
   }
 
   const assignReviewer = async (projectId, reviewerId) => {
+    // guard: prevent assigning to finalized projects
+    const proj = projects.find(x => (x.id === projectId || x._id === projectId))
+    if (proj && (proj.status === 'accepted' || proj.status === 'rejected')) {
+      toast.error('Cannot assign reviewers to accepted or rejected projects')
+      return
+    }
     setAssigning(true)
     try {
       // API: POST /api/projects/:id/assign { reviewerId }
@@ -100,6 +120,12 @@ function AdminDashboard() {
   }
 
   const unassignReviewer = async (projectId, reviewerId) => {
+    // guard: prevent unassigning on finalized projects
+    const proj = projects.find(x => (x.id === projectId || x._id === projectId))
+    if (proj && (proj.status === 'accepted' || proj.status === 'rejected')) {
+      toast.error('Cannot modify reviewers for accepted or rejected projects')
+      return
+    }
     setAssigning(true)
     try {
       const res = await axiosInstance.post(`/api/projects/${projectId}/unassign`, { reviewerId })
@@ -120,8 +146,13 @@ function AdminDashboard() {
   }
 
   const decideProject = async (projectId, decision) => {
-    // client-side guard: ensure the project has assigned reviewers or at least one review/comment
+    // client-side guard: prevent flips if already finalized
     const proj = projects.find(x => (x.id === projectId || x._id === projectId))
+    if (proj && (proj.status === 'accepted' || proj.status === 'rejected')) {
+      toast.error('Decision already finalized and cannot be changed')
+      return
+    }
+    // client-side guard: ensure the project has assigned reviewers or at least one review/comment
     if (proj && ((proj.assignedReviewers || []).length === 0 && (proj.reviews || []).length === 0)) {
       toast.error('Cannot accept/reject: assign a reviewer or wait for a review/comment')
       return
@@ -215,8 +246,30 @@ function AdminDashboard() {
 
 
 
+  // Defensive: hide stray global overlays (tailwind `bg-black/40`) that may persist
+  useEffect(() => {
+    const removeOverlays = () => {
+      document.querySelectorAll('div').forEach(el => {
+        try {
+          if (!el.classList) return
+          if (el.classList.contains('bg-black/40')) {
+            // don't hide overlays that belong to this admin component
+            if (!el.closest('#admin-root')) {
+              el.style.display = 'none'
+            }
+          }
+        } catch (e) {}
+      })
+    }
+    // run once and watch for new nodes
+    removeOverlays()
+    const mo = new MutationObserver(removeOverlays)
+    mo.observe(document.body, { childList: true, subtree: true })
+    return () => mo.disconnect()
+  }, [])
+
   return (
-    <div className="max-w-6xl mx-auto p-6">
+    <div id="admin-root" className="max-w-6xl mx-auto p-6">
       <ToastContainer />
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Admin Dashboard</h1>
@@ -244,36 +297,51 @@ function AdminDashboard() {
               </div>
             </div>
             <p className="mt-3 text-gray-700 flex-1">{p.summary}</p>
+            {p.document && (
+              <div className="mt-2">
+                <a href={p.document} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600">View attachment</a>
+              </div>
+            )}
             <div className="mt-4 flex flex-wrap gap-2 items-center">
               <div className="flex gap-2 items-center">
-                <select defaultValue="" onChange={(e) => assignReviewer(p.id, e.target.value)} className="border rounded px-2 py-1">
-                  <option value="">Assign reviewer</option>
-                  {reviewers.map(r => (
-                    <option key={(r._id || r.id)} value={(r._id || r.id)}>{`${(r.firstName || r.name || '')} ${(r.lastName || '').trim()}`.trim()}{r.title ? ` — ${r.title}` : ''}</option>
-                  ))}
-                </select>
+                {(() => {
+                  const isFinal = p.status === 'accepted' || p.status === 'rejected'
+                  return (
+                    <select defaultValue="" onChange={(e) => !isFinal && assignReviewer(p.id, e.target.value)} disabled={isFinal} className={`border rounded px-2 py-1 ${isFinal ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}>
+                      <option value="">Assign reviewer</option>
+                      {reviewers.map(r => (
+                        <option key={(r._id || r.id)} value={(r._id || r.id)}>{`${(r.firstName || r.name || '')} ${(r.lastName || '').trim()}`.trim()}{r.title ? ` — ${r.title}` : ''}</option>
+                      ))}
+                    </select>
+                  )
+                })()}
                 <div className="flex gap-2">
-                  {(p.assignedReviewers || []).map(r => (
-                    <div key={(r._id || r.id)} className="inline-flex items-center gap-2 px-2 py-1 rounded bg-indigo-50 text-indigo-700 text-sm">
-                      <span>{`${(r.firstName || r.name || '')} ${(r.lastName || '').trim()}`.trim()}{r.title ? ` — ${r.title}` : ''}</span>
-                      <button title="Remove reviewer" onClick={() => unassignReviewer(p.id, (r._id || r.id))} className="ml-2 text-red-500 hover:text-red-700">×</button>
-                    </div>
-                  ))}
+                  {(p.assignedReviewers || []).map(r => {
+                    const isFinal = p.status === 'accepted' || p.status === 'rejected'
+                    return (
+                      <div key={(r._id || r.id)} className="inline-flex items-center gap-2 px-2 py-1 rounded bg-indigo-50 text-indigo-700 text-sm">
+                        <span>{`${(r.firstName || r.name || '')} ${(r.lastName || '').trim()}`.trim()}{r.title ? ` — ${r.title}` : ''}</span>
+                        <button title="Remove reviewer" onClick={() => !isFinal && unassignReviewer(p.id, (r._id || r.id))} disabled={isFinal} className={`ml-2 ${isFinal ? 'text-gray-400 cursor-not-allowed' : 'text-red-500 hover:text-red-700'}`}>×</button>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             </div>
             <div className="mt-4 flex items-center gap-2">
               <button onClick={() => openComments(p)} className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-indigo-50 text-indigo-700"> <FaComments/> Comments</button>
-              {(() => {
-                const canDecide = ((p.assignedReviewers || []).length > 0) || ((p.reviews || []).length > 0)
-                return (
-                  <>
-                    <button disabled={decisionLoading || !canDecide} onClick={() => decideProject(p.id, 'accept')} className={`inline-flex items-center gap-2 px-3 py-2 rounded-md ${canDecide ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}> <FaCheck/> Accept</button>
-                    <button disabled={decisionLoading || !canDecide} onClick={() => decideProject(p.id, 'reject')} className={`inline-flex items-center gap-2 px-3 py-2 rounded-md ${canDecide ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}> <FaTimes/> Reject</button>
-                    {!canDecide && <div className="text-sm text-gray-500 ml-2">Assign a reviewer or wait for comments before deciding</div>}
-                  </>
-                )
-              })()}
+                {(() => {
+                  const isFinal = p.status === 'accepted' || p.status === 'rejected'
+                  const canDecide = !isFinal && (((p.assignedReviewers || []).length > 0) || ((p.reviews || []).length > 0))
+                  return (
+                    <>
+                      <button disabled={decisionLoading || !canDecide} onClick={() => decideProject(p.id, 'accept')} className={`inline-flex items-center gap-2 px-3 py-2 rounded-md ${canDecide ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}> <FaCheck/> Accept</button>
+                      <button disabled={decisionLoading || !canDecide} onClick={() => decideProject(p.id, 'reject')} className={`inline-flex items-center gap-2 px-3 py-2 rounded-md ${canDecide ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}> <FaTimes/> Reject</button>
+                      {isFinal && <div className="text-sm text-gray-500 ml-2">Decision finalized: {p.status}</div>}
+                      {!isFinal && !canDecide && <div className="text-sm text-gray-500 ml-2">Assign a reviewer or wait for comments before deciding</div>}
+                    </>
+                  )
+                })()}
             </div>
           </div>
         ))}
@@ -300,8 +368,8 @@ function AdminDashboard() {
 
       {/* Edit reviewer modal */}
       {editingReviewer && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white rounded-lg p-6">
+        <div onClick={() => setEditingReviewer(null)} className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md bg-white rounded-lg p-6">
             <div className="flex items-start justify-between">
               <h3 className="text-lg font-semibold">Edit Reviewer</h3>
               <button onClick={() => setEditingReviewer(null)} className="text-gray-500">Close</button>
@@ -337,12 +405,15 @@ function AdminDashboard() {
 
      {/* Comments modal */}
       {selectedProject && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
-          <div className="w-full max-w-2xl bg-white rounded-lg shadow-lg p-6">
+        <div onClick={() => { setSelectedProject(null); setComments([]) }} className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl bg-white rounded-lg shadow-lg p-6">
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-xl font-semibold">Comments for {selectedProject.title}</h2>
                 <p className="text-sm text-gray-500">{selectedProject.client} • {selectedProject.submittedAt}</p>
+                {selectedProject.document && (
+                  <div className="mt-1"><a href={selectedProject.document} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600">Open attachment</a></div>
+                )}
               </div>
               <button onClick={() => { setSelectedProject(null); setComments([]) }} className="text-gray-500">Close</button>
             </div>
