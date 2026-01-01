@@ -23,7 +23,9 @@ export default function authMiddleware(req, res, next) {
     };
   } catch (err) {
     console.warn("JWT verification failed:", err.message);
-    return res.status(401).json({ message: "Invalid or expired token" });
+    // Don't block the request for public endpoints — leave `req.user` undefined
+    // Protected routes use `requireAuth` which will enforce authentication.
+    return next();
   }
   next();
 }
