@@ -176,7 +176,7 @@ const handleSubmit = async (e) => {
         <button onClick={logout} className="px-3 py-2 rounded-md bg-gray-100 text-gray-800">Logout</button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-1 bg-white rounded-lg shadow p-4">
+        <div className="md:col-span-2 bg-white rounded-lg shadow p-4">
           <h2 className="text-lg font-semibold mb-3">Submit a Project</h2>
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
@@ -218,7 +218,7 @@ const handleSubmit = async (e) => {
           </form>
         </div>
 
-        <div className="md:col-span-2">
+        <div className="md:col-span-1">
           <h2 className="text-lg font-semibold mb-3">Your Projects</h2>
           <div className="space-y-4">
             {loading && <div className="text-gray-500">Loading...</div>}

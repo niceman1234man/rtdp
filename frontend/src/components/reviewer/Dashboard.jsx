@@ -124,6 +124,11 @@ function ReviewerDashboard() {
               </div>
             </div>
             <p className="mt-3 text-gray-700 flex-1">{p.summary}</p>
+            {p.document && (
+              <div className="mt-2">
+                <a href={p.document} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600">View attachment</a>
+              </div>
+            )}
             <div className="mt-4 flex items-center gap-2">
               <button onClick={() => openProject(p)} className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-indigo-50 text-indigo-700"> <FaCommentDots/> Review</button>
             </div>
@@ -139,6 +144,9 @@ function ReviewerDashboard() {
               <div>
                 <h2 className="text-xl font-semibold">{selected.title}</h2>
                 <p className="text-sm text-gray-500">{selected.client} • {selected.submittedAt}</p>
+                {selected.document && (
+                  <div className="mt-1"><a href={selected.document} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600">Open attachment</a></div>
+                )}
               </div>
               <button onClick={() => setSelected(null)} className="text-gray-500">Close</button>
             </div>
