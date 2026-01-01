@@ -1,1 +1,14 @@
 @import "tailwindcss";
+
+/* Ensure HTML summaries render tables with visible borders */
+.summary-content table {
+	border-collapse: collapse;
+	width: 100%;
+}
+.summary-content table, .summary-content th, .summary-content td {
+	border: 1px solid rgba(156,163,175,0.5); /* tailwind gray-400 at 50% */
+}
+.summary-content th, .summary-content td {
+	padding: 0.5rem;
+	text-align: left;
+}
