@@ -6,6 +6,16 @@ import { toast, ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
 function AdminDashboard() {
+  const decodeHtml = (s) => {
+    if (!s) return ''
+    try {
+      const txt = document.createElement('textarea')
+      txt.innerHTML = s
+      return txt.value
+    } catch (e) {
+      return s
+    }
+  }
   const [projects, setProjects] = useState([])
   const [reviewers, setReviewers] = useState([])
   const [loading, setLoading] = useState(false)
@@ -56,6 +66,8 @@ function AdminDashboard() {
         axiosInstance.get('/api/projects'),
         axiosInstance.get('/api/reviewers'),
       ])
+      console.log('GET /api/projects response (admin):', pRes.data)
+      console.log('Project summaries (admin):', (pRes.data || []).map(d => d.summary))
       // normalize ids for UI
       const projectsData = (pRes.data || []).map(p => ({
         ...p,
@@ -296,7 +308,7 @@ function AdminDashboard() {
                 <span className={`px-2 py-1 rounded-full text-xs ${p.status === 'accepted' ? 'bg-green-100 text-green-700' : p.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-50 text-yellow-700'}`}>{p.status}</span>
               </div>
             </div>
-            <p className="mt-3 text-gray-700 flex-1">{p.summary}</p>
+            <div className="mt-3 text-gray-700 flex-1" dangerouslySetInnerHTML={{ __html: decodeHtml(p.summary) }} />
             {p.document && (
               <div className="mt-2">
                 <a href={p.document} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600">View attachment</a>

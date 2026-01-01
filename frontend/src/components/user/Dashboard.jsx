@@ -9,6 +9,16 @@ import { toast, ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
 function UserDashboard() {
+  const decodeHtml = (s) => {
+    if (!s) return ''
+    try {
+      const txt = document.createElement('textarea')
+      txt.innerHTML = s
+      return txt.value
+    } catch (e) {
+      return s
+    }
+  }
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -35,7 +45,9 @@ function UserDashboard() {
     setError('')
     try {
       const res = await axiosInstance.get('/api/projects')
+      console.log('GET /api/projects response (user):', res.data)
       const data = res.data || []
+      console.log('Project summaries (user):', data.map(d => d.summary))
       // normalize _id -> id for convenience in the UI
       const normalized = data.map(p => ({ ...p, id: p._id || p.id }))
       setProjects(normalized)
@@ -196,7 +208,7 @@ const handleSubmit = async (e) => {
                     }}
                     config={{
                       toolbar: [
-                        'bold', 'italic', 'superscript', 'subscript', 'insertTable', 'numberedList', 'bulletedList', 'link', 'undo', 'redo', 'fontColor', 'fontBackgroundColor', 'fontSize', 'fontFamily', 'blockQuote'
+                        'bold', 'italic', 'link', 'insertTable', 'numberedList', 'bulletedList', 'undo', 'redo', 'blockQuote'
                       ]
                     }}
                   />
@@ -228,7 +240,7 @@ const handleSubmit = async (e) => {
               <div key={p.id} className="bg-white rounded-lg shadow p-4 flex flex-col md:flex-row md:items-center md:justify-between">
                 <div>
                   <h3 className="text-lg font-medium">{p.title}</h3>
-                  <p className="text-sm text-gray-600">{p.summary}</p>
+                       <div className="text-sm text-gray-600" dangerouslySetInnerHTML={{ __html: decodeHtml(p.summary) }} />
                   {p.document && <div className="text-sm mt-1"><a href={p.document} target="_blank" rel="noopener noreferrer" className="text-indigo-600">Attachment</a></div>}
                 </div>
                 <div className="mt-3 md:mt-0 flex items-center gap-3">

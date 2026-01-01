@@ -12,6 +12,15 @@ export const createProject = async (req, res) => {
     console.log('AUTH HEADER:', req.headers.authorization)
     console.log('REQ.USER:', req.user)
     console.log('REQ.FILE:', req.file)
+    console.log('RAW SUMMARY (incoming):', summary)
+
+    // simple unescape for common HTML entities to avoid double-escaped HTML
+    const unescapeHtml = (s) => {
+      if (!s || typeof s !== 'string') return s
+      return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    }
+    const decodedSummary = unescapeHtml(summary)
+    console.log('DECODED SUMMARY (to save):', decodedSummary)
 
     if (!title || !summary) {
       return res.status(400).json({ message: 'Title and summary are required' })
@@ -28,7 +37,7 @@ export const createProject = async (req, res) => {
 
     const project = await Project.create({
       title,
-      summary,
+      summary: decodedSummary,
       // multer / cloudinary may set different properties depending on storage plugin
       document: req.file ? (req.file.path || req.file.secure_url || req.file.url || req.file.location || "") : "",
       public_id: req.file ? (req.file.public_id || req.file.filename || req.file.originalname || "") : "",
@@ -336,8 +345,14 @@ export const updateProject = async (req, res) => {
 
     // Update provided fields
     const updatable = ['title', 'summary', 'client', 'status', 'assignedReviewers', 'clientEmail'];
+    const unescapeHtml = (s) => {
+      if (!s || typeof s !== 'string') return s
+      return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    }
     updatable.forEach(k => {
-      if (Object.prototype.hasOwnProperty.call(req.body, k)) project[k] = req.body[k];
+      if (Object.prototype.hasOwnProperty.call(req.body, k)) {
+        project[k] = k === 'summary' ? unescapeHtml(req.body[k]) : req.body[k]
+      }
     });
 
     await project.save();

@@ -6,6 +6,16 @@ import { toast, ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
 function ReviewerDashboard() {
+  const decodeHtml = (s) => {
+    if (!s) return ''
+    try {
+      const txt = document.createElement('textarea')
+      txt.innerHTML = s
+      return txt.value
+    } catch (e) {
+      return s
+    }
+  }
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(false)
   const [selected, setSelected] = useState(null)
@@ -35,6 +45,8 @@ function ReviewerDashboard() {
       }
       const query = userId ? `?assignedTo=${userId}` : '?assignedTo=me'
       const res = await axiosInstance.get(`/api/projects${query}`)
+      console.log('GET /api/projects response (reviewer):', res.data)
+      console.log('Project summaries (reviewer):', (res.data || []).map(d => d.summary))
       const data = res.data || []
       const normalized = data.map(p => ({ ...p, id: p._id || p.id }))
       setProjects(normalized)
@@ -123,7 +135,7 @@ function ReviewerDashboard() {
                 <span className={`px-2 py-1 rounded-full text-xs ${p.status === 'accepted' ? 'bg-green-100 text-green-700' : p.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-50 text-yellow-700'}`}>{p.status}</span>
               </div>
             </div>
-            <p className="mt-3 text-gray-700 flex-1">{p.summary}</p>
+            <div className="mt-3 text-gray-700 flex-1" dangerouslySetInnerHTML={{ __html: decodeHtml(p.summary) }} />
             {p.document && (
               <div className="mt-2">
                 <a href={p.document} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600">View attachment</a>
@@ -147,10 +159,13 @@ function ReviewerDashboard() {
                 {selected.document && (
                   <div className="mt-1"><a href={selected.document} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600">Open attachment</a></div>
                 )}
+                {selected.document && (
+                  <div className="mt-1"><a href={selected.document} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600">Open attachment</a></div>
+                )}
               </div>
               <button onClick={() => setSelected(null)} className="text-gray-500">Close</button>
             </div>
-            <p className="mt-4 text-gray-700">{selected.summary}</p>
+            <div className="mt-4 text-gray-700" dangerouslySetInnerHTML={{ __html: decodeHtml(selected.summary) }} />
 
            <div className="mt-4">
               <label className="block text-sm font-medium text-gray-700">Comments</label>
