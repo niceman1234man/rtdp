@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axiosInstance from '../../utils/axiosInstance'
 import { FaSearch, FaCommentDots } from 'react-icons/fa'
@@ -23,6 +23,7 @@ function ReviewerDashboard() {
   const [comment, setComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const navigate = useNavigate()
+  const commentRef = useRef(null)
   const logout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
@@ -33,6 +34,12 @@ function ReviewerDashboard() {
   useEffect(() => {
     fetchAssigned()
   }, [])
+
+  useEffect(() => {
+    if (selected && commentRef.current) {
+      commentRef.current.focus()
+    }
+  }, [selected])
 
  const fetchAssigned = async () => {
     setLoading(true)
@@ -181,10 +188,24 @@ function ReviewerDashboard() {
               </div>
 
               <label className="block text-sm font-medium text-gray-700 mt-4">Your comment</label>
+              <textarea
+                ref={commentRef}
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                rows={4}
+                placeholder="Write your comment..."
+                className="mt-2 w-full border rounded p-2"
+                disabled={submitting}
+              />
             </div>
 
           <div className="mt-4 flex gap-2 justify-end">
-              <button disabled={submitting} onClick={submitReview} className="px-4 py-2 bg-indigo-600 text-white rounded-md">Save Comment</button>
+              <button
+                disabled={submitting || !comment.trim()}
+                onClick={submitReview}
+                className={`px-4 py-2 rounded-md ${submitting || !comment.trim() ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-indigo-600 text-white'}`}>
+                Save Comment
+              </button>
             </div>
           </div>
         </div>
