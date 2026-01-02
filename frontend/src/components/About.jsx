@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import logo from '../assets/photo_2026-01-01_20-18-47.jpg'
 
 function About() {
   return (
@@ -17,8 +18,8 @@ function About() {
             <Link to="/contact" className="inline-block bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">Contact Us</Link>
           </div>
         </div>
-        <div className="w-36 h-36 rounded-md overflow-hidden border border-gray-100">
-          <img className="w-full h-full object-cover" src="https://via.placeholder.com/280x280.png?text=Projects" alt="Projects illustration" />
+        <div className="w-100 h-50 rounded-md  border border-gray-100">
+          <img className="w-full h-full object-cover" src={logo} alt="Projects illustration" />
         </div>
       </div>
 
