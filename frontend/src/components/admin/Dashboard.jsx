@@ -115,8 +115,13 @@ function AdminDashboard() {
       const res = await axiosInstance.post(`/api/projects/${projectId}/assign`, { reviewerId })
       const updated = res.data || null
       if (updated) {
-        // normalize and replace project in state
-        const normalized = { ...updated, id: updated._id || updated.id, assignedReviewers: (updated.assignedReviewers||[]).map(r => ({ ...r, id: r._id || r.id })) }
+        // normalize and replace project in state; ensure status reflects that it's now under review
+        const normalized = {
+          ...updated,
+          id: updated._id || updated.id,
+          status: updated.status || 'in-review',
+          assignedReviewers: (updated.assignedReviewers||[]).map(r => ({ ...r, id: r._id || r.id }))
+        }
         setProjects(ps => ps.map(p => (p.id === normalized.id ? normalized : p)))
       } else {
         // fallback to refetch if response isn't the updated project
