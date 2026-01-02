@@ -198,10 +198,19 @@ function AdminDashboard() {
         toast.success(`Project ${decision === 'accept' ? 'accepted' : 'rejected'}`)
       }
     } catch (err) {
-      console.error('Decision failed', err)
-      // surface server-side message when the decision was rejected due to missing reviewers/comments
-      const msg = err?.response?.data?.message || 'Failed to apply decision. Please try again.'
-      toast.error(msg)
+        console.error('Decision failed', err)
+        // surface server-side message when the decision was rejected due to missing reviewers/comments
+        const serverMsg = err?.response?.data?.message
+        const status = err?.response?.status
+        if (serverMsg) {
+          toast.error(serverMsg)
+        } else if (status) {
+          toast.error(`Request failed (${status}): ${err.message || 'Server error'}`)
+        } else {
+          toast.error(err?.message || 'Failed to apply decision. Please try again.')
+        }
+        // helpful debug traces
+        if (err?.response) console.error('Decision response data:', err.response.data)
     } finally {
       setDecisionLoading(false)
     }

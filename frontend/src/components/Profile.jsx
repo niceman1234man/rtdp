@@ -33,7 +33,22 @@ function Profile() {
     try {
       const id = u._id || u.id
       if (!id) return
-      if (u.role === 'reviewer' || u.title) {
+      // determine reviewer role more reliably: prefer stored role, fall back to token
+      let isReviewer = false
+      if (u.role && String(u.role).toLowerCase() === 'reviewer') isReviewer = true
+      else {
+        try {
+          const t = localStorage.getItem('token')
+          if (t) {
+            const p = JSON.parse(atob(t.split('.')[1]))
+            if (p && p.role && String(p.role).toLowerCase() === 'reviewer') isReviewer = true
+          }
+        } catch (e) {
+          // ignore decoding errors
+        }
+      }
+
+      if (isReviewer || u.title) {
         const res = await axiosInstance.get(`/api/reviewers/${id}`)
         setForm(res.data || {})
         setUser(res.data || u)

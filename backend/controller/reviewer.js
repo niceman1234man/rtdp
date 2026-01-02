@@ -100,10 +100,16 @@ export const getAllReviewers = async (req, res) => {
 }
 export const getReviewerById = async (req, res) => {
   try {
-    const reviewer = await Reviewer.findById(req.params.id);
-    if (!reviewer) {
-      return res.status(404).json({ message: 'Reviewer not found' });
+    // Authorization: allow admins or the reviewer themself
+    if (!req.user || (!req.user.role || req.user.role !== 'admin') ) {
+      // if not admin, require that the requested id matches the authenticated user id
+      if (!req.user || String(req.user.userId) !== String(req.params.id)) {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
     }
+
+    const reviewer = await Reviewer.findById(req.params.id);
+    if (!reviewer) return res.status(404).json({ message: 'Reviewer not found' });
     res.status(200).json(reviewer);
     } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -124,20 +130,24 @@ export const updateReviewer = async (req, res) => {
 export const updateReviewerPassword = async (req, res) => {
   try {
     const { oldPassword, newPassword, confirmPassword } = req.body;
+    console.log('updateReviewerPassword called for id=', req.params.id, 'by user=', req.user && req.user.userId);
+    console.log('request body keys:', Object.keys(req.body || {}));
     if (!oldPassword || !newPassword || !confirmPassword) return res.status(400).json({ message: 'All fields are required' });
     if (newPassword !== confirmPassword) return res.status(400).json({ message: 'New passwords do not match' });
     const reviewer = await Reviewer.findById(req.params.id);
     if (!reviewer) return res.status(404).json({ message: 'Reviewer not found' });
-    const isMatch = await require('bcryptjs').compare(oldPassword, reviewer.password || '');
+    // If reviewer has no password set, treat as mismatch
+    const currentHash = reviewer.password || '';
+    const isMatch = currentHash ? await bcrypt.compare(oldPassword, currentHash) : false;
     if (!isMatch) return res.status(400).json({ message: 'Incorrect old password' });
-    const salt = await require('bcryptjs').genSalt(10);
-    const hashed = await require('bcryptjs').hash(newPassword, salt);
+    const salt = await bcrypt.genSalt(10);
+    const hashed = await bcrypt.hash(newPassword, salt);
     reviewer.password = hashed;
     await reviewer.save();
     res.status(200).json({ message: 'Password updated successfully' });
   } catch (error) {
-    console.error('Error updating reviewer password:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error updating reviewer password', error && error.stack ? error.stack : error);
+    res.status(500).json({ message: error?.message || 'Server error' });
   }
 }
 export const deleteReviewer = async (req, res) => {
