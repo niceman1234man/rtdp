@@ -15,7 +15,7 @@ const corsOptions = {
    origin: [
       'http://localhost:5173',
       'http://localhost:3000',
-      'https://rtdp.netlify.app',
+      'https://rtdp1.netlify.app',
       'https://rtdp.onrender.com'
    ],
    credentials: true,
