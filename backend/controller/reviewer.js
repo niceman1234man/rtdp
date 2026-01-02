@@ -22,6 +22,7 @@ export const createReviewer = async (req, res) => {
     // send email with credentials if mailer is configured
     let emailSent = false;
     let emailError = null;
+    let emailQueued = false;
     if (process.env.USER_EMAIL && process.env.PASSWORD) {
       try {
         const transporter = nodemailer.createTransport({
@@ -42,19 +43,29 @@ export const createReviewer = async (req, res) => {
             <p>Thanks,<br/>The Review Team</p>
           </div>
         `;
-        const text = `Hello ${firstName},\n\nAn account has been created for you as a reviewer.\n\nLogin: ${email}\nPassword: ${rawPassword}\n\nSign in: ${loginUrl}\n\nPlease change your password after first login.\n\nThanks,\nThe Review Team`;
-        await transporter.sendMail({ from: process.env.USER_EMAIL, to: email, subject, text, html });
-        emailSent = true;
+        const text = `Hello ${firstName},\\n\\nAn account has been created for you as a reviewer.\\n\\nLogin: ${email}\\nPassword: ${rawPassword}\\n\\nSign in: ${loginUrl}\\n\\nPlease change your password after first login.\\n\\nThanks,\\nThe Review Team`;
+
+        // Send email asynchronously so slow mail delivery doesn't delay the API response
+        emailQueued = true;
+        transporter.sendMail({ from: process.env.USER_EMAIL, to: email, subject, text, html })
+          .then(() => {
+            console.log('Reviewer welcome email sent to', email);
+            emailSent = true;
+          })
+          .catch((e) => {
+            console.error('Failed to send reviewer welcome email (async):', e);
+            // store message in logs; we don't attempt to modify response after it's sent
+          });
       } catch (e) {
-        console.error('Failed to send reviewer welcome email:', e);
-        emailError = e?.message || 'Failed to send email';
+        console.error('Failed to queue reviewer welcome email:', e);
+        emailError = e?.message || 'Failed to queue email';
       }
     }
 
     // do not return password hash
     const out = { ...newReviewer.toObject() };
     delete out.password;
-    res.status(201).json({ reviewer: out, emailSent, emailError });
+    res.status(201).json({ reviewer: out, emailSent, emailError, emailQueued });
   } catch (error) {
     console.error('Error creating reviewer:', error);
     if (error && error.code === 11000) return res.status(400).json({ message: 'A reviewer with this email already exists' });
