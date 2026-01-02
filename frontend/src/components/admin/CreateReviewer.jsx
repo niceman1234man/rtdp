@@ -20,6 +20,15 @@ function CreateReviewer() {
     }
     setSubmitting(true)
     try {
+      // pre-check for existing reviewer to show friendly message
+      const listRes = await axiosInstance.get('/api/reviewers')
+      const exists = (listRes.data || []).some(r => (r.email || '').toLowerCase() === email.toLowerCase())
+      if (exists) {
+        toast.error('A reviewer with this email already exists')
+        setSubmitting(false)
+        return
+      }
+
       await axiosInstance.post('/api/reviewers', { firstName, lastName, email, title })
       toast.success('Reviewer created')
       navigate('/admin-dashboard')
