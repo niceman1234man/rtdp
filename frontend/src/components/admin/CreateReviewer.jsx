@@ -25,7 +25,8 @@ function CreateReviewer() {
       navigate('/admin-dashboard')
     } catch (err) {
       console.error('Create reviewer failed', err)
-      toast.error('Failed to create reviewer')
+      const msg = err?.response?.data?.message || err?.message || 'Failed to create reviewer'
+      toast.error(msg)
     } finally {
       setSubmitting(false)
     }
