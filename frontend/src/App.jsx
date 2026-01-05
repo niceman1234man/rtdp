@@ -12,6 +12,7 @@ import CreateReviewer from './components/admin/CreateReviewer.jsx';
 import Profile from './components/Profile.jsx';
 import UserDashboard from './components/user/Dashboard.jsx';
 import ResetPassword from './components/auth/ResetPassword.jsx';
+import Contact from './components/Contact.jsx';
  
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
         <Route path="/admin/create-reviewer" element={<CreateReviewer />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/contact" element={<Contact />} />
         <Route path="/user-dashboard" element={<UserDashboard />} />
       </Routes>
       

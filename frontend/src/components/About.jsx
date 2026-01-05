@@ -23,23 +23,28 @@ function About() {
         </div>
       </div>
 
-      <h2 className="mt-8 text-xl font-medium text-gray-900">How it works</h2>
+      <h2 className="mt-8 text-xl font-medium text-gray-900">Why RTDP Matters</h2>
+      <p className="mt-2 text-gray-600">RTDP helps teams make better decisions faster by connecting submitters with expert reviewers and giving admins the tools to act on high-quality feedback.</p>
+
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="p-4 bg-gray-50 rounded-md border">
-          <strong className="block text-gray-800">1. Submit</strong>
-          <p className="text-gray-600">Clients create a clear project submission with files and details.</p>
+        <div className="p-4 bg-white rounded-md border shadow-sm">
+          <strong className="block text-gray-800">Expert Feedback</strong>
+          <p className="text-gray-600">Connects submissions with qualified reviewers so feedback is informed, actionable, and focused on impact.</p>
         </div>
-        <div className="p-4 bg-gray-50 rounded-md border">
-          <strong className="block text-gray-800">2. Assign</strong>
-          <p className="text-gray-600">Admin assigns the project to one or more qualified reviewers.</p>
+
+        <div className="p-4 bg-white rounded-md border shadow-sm">
+          <strong className="block text-gray-800">Faster Decisions</strong>
+          <p className="text-gray-600">Structured reviews and assignment workflows reduce review cycles and speed up acceptance or rejection.</p>
         </div>
-        <div className="p-4 bg-gray-50 rounded-md border">
-          <strong className="block text-gray-800">3. Review</strong>
-          <p className="text-gray-600">Reviewers leave structured comments and suggestions.</p>
+
+        <div className="p-4 bg-white rounded-md border shadow-sm">
+          <strong className="block text-gray-800">Transparent Process</strong>
+          <p className="text-gray-600">All comments, decisions, and assignments are recorded — creating an auditable trail for accountability.</p>
         </div>
-        <div className="p-4 bg-gray-50 rounded-md border">
-          <strong className="block text-gray-800">4. Decision</strong>
-          <p className="text-gray-600">Admin accepts or rejects based on reviewer feedback.</p>
+
+        <div className="p-4 bg-white rounded-md border shadow-sm">
+          <strong className="block text-gray-800">Better Outcomes</strong>
+          <p className="text-gray-600">Higher-quality reviews lead to stronger submissions, improved stakeholder confidence, and better project outcomes.</p>
         </div>
       </div>
 
@@ -48,6 +53,7 @@ function About() {
         Clear communication, timely reviews, and actionable feedback — so your projects can
         move forward quickly.
       </p>
+      
     </div>
   )
 }

@@ -196,7 +196,7 @@ const handleSubmit = async (e) => {
               <input value={title} onChange={e => setTitle(e.target.value)} className="mt-1 w-full rounded-md p-2 border border-gray-200" placeholder="Project title" required />
             </div>
             <div>
-              <label className="block text-sm text-gray-700">Summary (supports bold, superscript/subscript, tables)</label>
+              <label className="block text-sm text-gray-700">Summary  </label>
               <div className="mt-1">
                 <div className="border rounded p-2">
                   <CKEditor

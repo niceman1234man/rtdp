@@ -310,85 +310,111 @@ function AdminDashboard() {
 
     {loading && <div className="text-gray-500">Loading...</div>}
 
-     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {projects.map(p => (
-          <div key={p.id} className="bg-white rounded-lg shadow p-4 flex flex-col">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="text-lg font-medium">{p.title}</h3>
-                <p className="text-sm text-gray-500">{p.client} • {p.submittedAt}</p>
-              </div>
-              <div className="text-sm">
-                <span className={`px-2 py-1 rounded-full text-xs ${p.status === 'accepted' ? 'bg-green-100 text-green-700' : p.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-50 text-yellow-700'}`}>{p.status}</span>
-              </div>
-            </div>
-            <div className="mt-3 text-gray-700 flex-1" dangerouslySetInnerHTML={{ __html: decodeHtml(p.summary) }} />
-            {p.document && (
-              <div className="mt-2">
-                <a href={p.document} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600">View attachment</a>
-              </div>
-            )}
-            <div className="mt-4 flex flex-wrap gap-2 items-center">
-              <div className="flex gap-2 items-center">
-                {(() => {
-                  const isFinal = p.status === 'accepted' || p.status === 'rejected'
-                  return (
-                    <select defaultValue="" onChange={(e) => !isFinal && assignReviewer(p.id, e.target.value)} disabled={isFinal} className={`border rounded px-2 py-1 ${isFinal ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}>
-                      <option value="">Assign reviewer</option>
-                      {reviewers.map(r => (
-                        <option key={(r._id || r.id)} value={(r._id || r.id)}>{`${(r.firstName || r.name || '')} ${(r.lastName || '').trim()}`.trim()}{r.title ? ` — ${r.title}` : ''}</option>
-                      ))}
-                    </select>
-                  )
-                })()}
-                <div className="flex gap-2">
-                  {(p.assignedReviewers || []).map(r => {
-                    const isFinal = p.status === 'accepted' || p.status === 'rejected'
-                    return (
-                      <div key={(r._id || r.id)} className="inline-flex items-center gap-2 px-2 py-1 rounded bg-indigo-50 text-indigo-700 text-sm">
-                        <span>{`${(r.firstName || r.name || '')} ${(r.lastName || '').trim()}`.trim()}{r.title ? ` — ${r.title}` : ''}</span>
-                        <button title="Remove reviewer" onClick={() => !isFinal && unassignReviewer(p.id, (r._id || r.id))} disabled={isFinal} className={`ml-2 ${isFinal ? 'text-gray-400 cursor-not-allowed' : 'text-red-500 hover:text-red-700'}`}>×</button>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-            <div className="mt-4 flex items-center gap-2">
-              <button onClick={() => openComments(p)} className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-indigo-50 text-indigo-700"> <FaComments/> Comments</button>
-                {(() => {
-                  const isFinal = p.status === 'accepted' || p.status === 'rejected'
-                  const canDecide = !isFinal && (((p.assignedReviewers || []).length > 0) || ((p.reviews || []).length > 0))
-                  return (
-                    <>
-                      <button disabled={decisionLoading || !canDecide} onClick={() => decideProject(p.id, 'accept')} className={`inline-flex items-center gap-2 px-3 py-2 rounded-md ${canDecide ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}> <FaCheck/> Accept</button>
-                      <button disabled={decisionLoading || !canDecide} onClick={() => decideProject(p.id, 'reject')} className={`inline-flex items-center gap-2 px-3 py-2 rounded-md ${canDecide ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}> <FaTimes/> Reject</button>
-                      {isFinal && <div className="text-sm text-gray-500 ml-2">Decision finalized: {p.status}</div>}
-                      {!isFinal && !canDecide && <div className="text-sm text-gray-500 ml-2">Assign a reviewer or wait for comments before deciding</div>}
-                    </>
-                  )
-                })()}
-            </div>
-          </div>
-        ))}
+      <div className="overflow-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Project</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Client</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Submitted</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Reviewers</th>
+              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-100">
+            {projects.map(p => (
+              <tr key={p.id} className="hover:bg-gray-50">
+                <td className="px-4 py-3 align-top">
+                  <div className="font-medium">{p.title}</div>
+                  <div className="text-sm text-gray-600 mt-1" dangerouslySetInnerHTML={{ __html: (decodeHtml(p.summary) || '').slice(0, 160) + ((decodeHtml(p.summary)||'').length > 160 ? '...' : '') }} />
+                </td>
+                <td className="px-4 py-3 align-top text-sm text-gray-700">{p.client}</td>
+                <td className="px-4 py-3 align-top text-sm text-gray-500">{p.submittedAt}</td>
+                <td className="px-4 py-3 align-top">
+                  <span className={`px-2 py-1 rounded-full text-xs ${p.status === 'accepted' ? 'bg-green-100 text-green-700' : p.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-50 text-yellow-700'}`}>{p.status}</span>
+                </td>
+                <td className="px-4 py-3 align-top">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      {(p.assignedReviewers || []).map(r => {
+                        const isFinal = p.status === 'accepted' || p.status === 'rejected'
+                        return (
+                          <div key={(r._id || r.id)} className="inline-flex items-center gap-2 px-2 py-1 rounded bg-indigo-50 text-indigo-700 text-sm">
+                            <span>{`${(r.firstName || r.name || '')} ${(r.lastName || '').trim()}`.trim()}{r.title ? ` — ${r.title}` : ''}</span>
+                            <button title="Remove reviewer" onClick={() => !isFinal && unassignReviewer(p.id, (r._id || r.id))} disabled={isFinal} className={`ml-2 ${isFinal ? 'text-gray-400 cursor-not-allowed' : 'text-red-500 hover:text-red-700'}`}>×</button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div>
+                      {(() => {
+                        const isFinal = p.status === 'accepted' || p.status === 'rejected'
+                        return (
+                          <select defaultValue="" onChange={(e) => !isFinal && assignReviewer(p.id, e.target.value)} disabled={isFinal} className={`border rounded px-2 py-1 text-sm ${isFinal ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}>
+                            <option value="">Assign reviewer</option>
+                            {reviewers.map(r => (
+                              <option key={(r._id || r.id)} value={(r._id || r.id)}>{`${(r.firstName || r.name || '')} ${(r.lastName || '').trim()}`.trim()}{r.title ? ` — ${r.title}` : ''}</option>
+                            ))}
+                          </select>
+                        )
+                      })()}
+                    </div>
+                  </div>
+                </td>
+                <td className="px-4 py-3 align-top text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <button onClick={() => openComments(p)} className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-indigo-50 text-indigo-700"> <FaComments/> </button>
+                    {(() => {
+                      const isFinal = p.status === 'accepted' || p.status === 'rejected'
+                      const canDecide = !isFinal && (((p.assignedReviewers || []).length > 0) || ((p.reviews || []).length > 0))
+                      return (
+                        <>
+                          <button disabled={decisionLoading || !canDecide} onClick={() => decideProject(p.id, 'accept')} className={`inline-flex items-center gap-2 px-3 py-2 rounded-md ${canDecide ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}> <FaCheck/> </button>
+                          <button disabled={decisionLoading || !canDecide} onClick={() => decideProject(p.id, 'reject')} className={`inline-flex items-center gap-2 px-3 py-2 rounded-md ${canDecide ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}> <FaTimes/> </button>
+                        </>
+                      )
+                    })()}
+                  </div>
+                  {p.document && <div className="mt-2 text-right"><a href={p.document} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600">Attachment</a></div>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
      {/* Reviewers list */}
       <div className="mt-8">
         <h2 className="text-xl font-semibold mb-3">Reviewers</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {reviewers.map(r => (
-            <div key={(r._id || r.id)} className="p-3 border rounded flex items-center justify-between">
-              <div>
-                <div className="font-medium">{`${(r.firstName || r.name || '')} ${(r.lastName || '').trim()}`.trim()}{r.title ? <span className="text-sm text-gray-500"> — {r.title}</span> : null}</div>
-                <div className="text-sm text-gray-500">{r.email}</div>
-              </div>
-              <div className="flex gap-2 items-center">
-                <button onClick={() => openEditReviewer(r)} className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-yellow-100 text-yellow-800"><FaEdit/> Edit</button>
-                <button onClick={() => deleteReviewer(r._id || r.id)} disabled={deletingId===(r._id || r.id)} className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-red-100 text-red-700">{deletingId===(r._id || r.id) ? 'Deleting...' : (<><FaTrash/> Delete</>)}</button>
-              </div>
-            </div>
-          ))}
+        <div className="overflow-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Name</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Email</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Title</th>
+                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-100">
+              {reviewers.map(r => (
+                <tr key={(r._id || r.id)} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 align-top">
+                    <div className="font-medium">{`${(r.firstName || r.name || '')} ${(r.lastName || '').trim()}`.trim()}</div>
+                  </td>
+                  <td className="px-4 py-3 align-top text-sm text-gray-700">{r.email}</td>
+                  <td className="px-4 py-3 align-top text-sm text-gray-500">{r.title || '-'}</td>
+                  <td className="px-4 py-3 align-top text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button onClick={() => openEditReviewer(r)} className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-yellow-100 text-yellow-800"><FaEdit/> Edit</button>
+                      <button onClick={() => deleteReviewer(r._id || r.id)} disabled={deletingId===(r._id || r.id)} className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-red-100 text-red-700">{deletingId===(r._id || r.id) ? 'Deleting...' : (<><FaTrash/> Delete</>)}</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
