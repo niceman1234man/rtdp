@@ -31,7 +31,7 @@ projectRouter.delete('/:id', deleteProject);
 // Reviews routes
 projectRouter.get('/:id/reviews', getReviews);
 // posting reviews requires reviewer authentication
-projectRouter.post('/:id/reviews', requireAuth, requireRole('reviewer'), addReview);
+projectRouter.post('/:id/reviews', requireAuth, requireRole('reviewer'), upload.single('file'), addReview);
 
 // Assignment and decision routes (admin only)
 projectRouter.post('/:id/assign', requireAuth, requireRole('admin'), assignReviewer);

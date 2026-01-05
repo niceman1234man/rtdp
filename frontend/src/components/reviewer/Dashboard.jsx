@@ -21,6 +21,7 @@ function ReviewerDashboard() {
   const [selected, setSelected] = useState(null)
   const [reviews, setReviews] = useState([])
   const [comment, setComment] = useState('')
+  const [reviewFile, setReviewFile] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const navigate = useNavigate()
   const commentRef = useRef(null)
@@ -94,10 +95,20 @@ function ReviewerDashboard() {
           reviewerName = ((u.firstName || u.name || '') + ' ' + (u.lastName || '')).trim() || u.email || null
         }
       } catch (e) {}
-      // POST review to server
-      await axiosInstance.post(`/api/projects/${projectId}/reviews`, { comment, reviewerId, reviewerName })
+      // POST review to server — use multipart if a file is attached
+      if (reviewFile) {
+        const fd = new FormData()
+        fd.append('comment', comment)
+        fd.append('reviewerId', reviewerId)
+        fd.append('reviewerName', reviewerName)
+        fd.append('file', reviewFile)
+        await axiosInstance.post(`/api/projects/${projectId}/reviews`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      } else {
+        await axiosInstance.post(`/api/projects/${projectId}/reviews`, { comment, reviewerId, reviewerName })
+      }
       toast.success('Comment submitted')
       setComment('')
+      setReviewFile(null)
       // Refresh assigned projects to ensure fresh state (no local-only changes)
       fetchAssigned()
       // refresh reviews for the open project so the reviewer immediately sees the comment
@@ -183,6 +194,11 @@ function ReviewerDashboard() {
                     <div className="text-sm font-medium">{c.reviewerName || c.reviewer || 'Reviewer'}</div>
                     <div className="text-xs text-gray-500">{new Date(c.createdAt).toLocaleString()}</div>
                     <div className="mt-1 text-gray-700">{c.comment || c.text}</div>
+                        {c.file && (
+                          <div className="mt-2">
+                            <a href={c.file} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600">View attachment</a>
+                          </div>
+                        )}
                   </div>
                 ))}
               </div>
@@ -197,13 +213,18 @@ function ReviewerDashboard() {
                 className="mt-2 w-full border rounded p-2"
                 disabled={submitting}
               />
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-gray-700">Attach file (optional)</label>
+                <input type="file" onChange={(e) => setReviewFile(e.target.files[0] || null)} className="mt-2" />
+                {reviewFile && <div className="text-sm text-gray-600 mt-1">Selected: {reviewFile.name}</div>}
+              </div>
             </div>
 
           <div className="mt-4 flex gap-2 justify-end">
               <button
-                disabled={submitting || !comment.trim()}
+                disabled={submitting || (!comment.trim() && !reviewFile)}
                 onClick={submitReview}
-                className={`px-4 py-2 rounded-md ${submitting || !comment.trim() ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-indigo-600 text-white'}`}>
+                className={`px-4 py-2 rounded-md ${submitting || (!comment.trim() && !reviewFile) ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-indigo-600 text-white'}`}>
                 Save Comment
               </button>
             </div>

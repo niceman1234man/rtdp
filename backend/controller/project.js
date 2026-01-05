@@ -7,40 +7,33 @@ export const createProject = async (req, res) => {
   try {
     const { title, summary } = req.body
 
-    // debug logging to inspect uploaded file and auth during submission
-    console.log('--- createProject called ---')
-    console.log('AUTH HEADER:', req.headers.authorization)
-    console.log('REQ.USER:', req.user)
-    console.log('REQ.FILE:', req.file)
-    console.log('RAW SUMMARY (incoming):', summary)
-
-    // simple unescape for common HTML entities to avoid double-escaped HTML
-    const unescapeHtml = (s) => {
-      if (!s || typeof s !== 'string') return s
-      return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-    }
-    const decodedSummary = unescapeHtml(summary)
-    console.log('DECODED SUMMARY (to save):', decodedSummary)
-
     if (!title || !summary) {
       return res.status(400).json({ message: 'Title and summary are required' })
     }
 
-    // enforce uploaded document is provided
     if (!req.file) {
       return res.status(400).json({ message: 'Document file is required' })
     }
 
-    if (!req.user) return res.status(401).json({ message: 'Unauthorized' })
+    if (!req.user) {
+      return res.status(401).json({ message: 'Unauthorized' })
+    }
+
     const user = await User.findById(req.user.userId)
-    if (!user) return res.status(404).json({ message: 'User not found' })
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' })
+    }
 
     const project = await Project.create({
-      title,
-      summary: decodedSummary,
-      // multer / cloudinary may set different properties depending on storage plugin
-      document: req.file ? (req.file.path || req.file.secure_url || req.file.url || req.file.location || "") : "",
-      public_id: req.file ? (req.file.public_id || req.file.filename || req.file.originalname || "") : "",
+      title: String(title),
+      summary: 
+        typeof summary === 'string'
+          ? summary
+          : JSON.stringify(summary),
+      
+    // ✅ FORCE STRING
+      document: req.file.path || req.file.secure_url || '',
+      public_id: req.file.public_id || req.file.filename || '',
       submittedBy: user._id,
       client: user.company || 'Individual',
       clientEmail: user.email,
@@ -57,6 +50,7 @@ export const createProject = async (req, res) => {
     res.status(500).json({ message: 'Server error' })
   }
 }
+
 
 
 
